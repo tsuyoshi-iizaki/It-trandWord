@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブIT用語集 - トップ100</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutral with Subtle Teal Accent -->
+    <!-- Application Structure Plan: A dashboard-style single-page application was designed to provide a dynamic and user-centric experience. This structure, featuring a prominent control bar for real-time search, category filtering, and sorting, was chosen over a static list to empower users to actively explore the 100 terms based on their individual needs. The card-based grid layout ensures content is scannable, responsive, and visually organized, making a large dataset digestible and easy to navigate. -->
+    <!-- Visualization & Content Choices: Report Info: 100 IT terms with categories and trend scores. -> Goal: Organize, Inform, Compare. -> Viz/Presentation Method: Interactive card grid for individual terms, color-coded tags for trend scores (High/Mid/Low), and clear category labels. -> Interaction: Live text search, one-click category filtering, and two-way sorting (by trend, by name). Reference URLs are dynamically generated as search links for maintainability. -> Justification: This approach transforms a static report into an engaging learning tool. Cards provide structured detail, filters allow focused study, and sorting enables comparison of term importance. Dynamic search links offer immediate access to further reading. -> Library/Method: Vanilla JavaScript for all logic, Tailwind CSS for styling. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .term-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .term-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .control-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .control-button.active {
+            background-color: #14B8A6;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .control-button:not(.active):hover {
+            background-color: #F0F0F0;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FDFBF8;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9CA3AF;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800">IT業界用語集</h1>
+            <p class="text-lg text-gray-600 mt-2">トレンドのIT用語トップ100をインタラクティブに学ぶ</p>
+        </header>
+
+        <main>
+            <div id="controls" class="bg-white/80 backdrop-blur-sm sticky top-4 z-10 p-4 rounded-xl shadow-md mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-1">
+                        <input type="search" id="search-box" placeholder="キーワードで検索..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition">
+                    </div>
+                    <div class="md:col-span-2">
+                        <div class="flex flex-wrap items-center justify-start gap-2">
+                            <span class="font-semibold mr-2 text-gray-700">分類:</span>
+                            <button class="control-button category-filter px-4 py-2 rounded-lg text-sm font-medium active" data-category="all">すべて</button>
+                            <button class="control-button category-filter px-4 py-2 rounded-lg text-sm font-medium" data-category="先端技術・トレンド">先端技術</button>
+                            <button class="control-button category-filter px-4 py-2 rounded-lg text-sm font-medium" data-category="基盤技術・インフラ">基盤技術</button>
+                            <button class="control-button category-filter px-4 py-2 rounded-lg text-sm font-medium" data-category="開発・運用手法">開発/運用</button>
+                            <button class="control-button category-filter px-4 py-2 rounded-lg text-sm font-medium" data-category="ビジネス・マネジメント">ビジネス</button>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-start gap-2 mt-3">
+                             <span class="font-semibold mr-2 text-gray-700">並び替え:</span>
+                            <button id="sort-by-trend" class="control-button sort-button px-4 py-2 rounded-lg text-sm font-medium active">トレンド順</button>
+                            <button id="sort-by-name" class="control-button sort-button px-4 py-2 rounded-lg text-sm font-medium">五十音順</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="term-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+             <p id="no-results" class="text-center text-gray-500 text-lg hidden col-span-full">該当する用語が見つかりませんでした。</p>
+        </main>
+
+        <footer class="text-center mt-12 py-6 border-t">
+            <p class="text-gray-500">&copy; 2025 IT Glossary. All Rights Reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const termsData = [
+                { id: "T001", name: "5G", reading: "ふぁいぶじー", category: "基盤技術・インフラ", description: "第5世代移動通信システムの略で、高速・大容量、低遅延、多数同時接続といった特徴を持つ。", trendScore: 3 },
+                { id: "T002", name: "AI", reading: "えーあい", category: "先端技術・トレンド", description: "人間のような知能や学習能力をコンピュータで実現する技術。", trendScore: 3 },
+                { id: "T003", name: "AIエージェント", reading: "えーあいえーじぇんと", category: "先端技術・トレンド", description: "タスク受領から実行、フィードバック、改善までを自律的に実行するAI。", trendScore: 3 },
+                { id: "T004", name: "AR", reading: "えーあーる", category: "先端技術・トレンド", description: "現実世界にデジタル情報を重ね合わせる技術。", trendScore: 3 },
+                { id: "T005", name: "DevOps", reading: "でぶおぷす", category: "開発・運用手法", description: "開発と運用を一体化して、ソフトウェアの開発とリリースの効率化を図る手法。", trendScore: 2 },
+                { id: "T006", name: "DX", reading: "でじたるとらんすふぉーめーしょん", category: "ビジネス・マネジメント", description: "企業がデータやデジタル技術を活用し、ビジネスモデルや組織を変革していくこと。", trendScore: 3 },
+                { id: "T007", name: "IaaS", reading: "いあーす", category: "基盤技術・インフラ", description: "サーバーやストレージなどのITインフラをクラウド上で提供するサービス。", trendScore: 2 },
+                { id: "T008", name: "IoT", reading: "あいおーてぃー", category: "基盤技術・インフラ", description: "あらゆる「モノ」がインターネットに接続され、相互に通信する技術。", trendScore: 3 },
+                { id: "T009", name: "NFT", reading: "えぬえふてぃー", category: "先端技術・トレンド", description: "ブロックチェーン技術を用いてデジタル資産の所有権を証明する技術。", trendScore: 2 },
+                { id: "T010", name: "PaaS", reading: "ぱーす", category: "基盤技術・インフラ", description: "アプリケーション開発に必要なプラットフォームをクラウド上で提供するサービス。", trendScore: 2 },
+                { id: "T011", name: "RPA", reading: "あーるぴーえー", category: "基盤技術・インフラ", description: "ソフトウェアロボットが定型的な業務プロセスを自動化する技術。", trendScore: 2 },
+                { id: "T012", name: "SaaS", reading: "さーす", category: "ビジネス・マネジメント", description: "インターネットを通じてソフトウェアを利用できるサービス。", trendScore: 3 },
+                { id: "T013", name: "XR", reading: "くろすりありてぃ", category: "先端技術・トレンド", description: "VR、AR、MRを総称する用語で、複数の現実感技術を組み合わせた体験を提供する。", trendScore: 2 },
+                { id: "T014", name: "アクセシビリティ", reading: "あくせしびりてぃ", category: "開発・運用手法", description: "高齢者や障害者など、誰でもウェブサイトやサービスを利用できること。", trendScore: 1 },
+                { id: "T015", name: "アジャイル開発", reading: "あじゃいるかいはつ", category: "開発・運用手法", description: "顧客のニーズに合わせて柔軟に開発を進めるシステム開発手法。", trendScore: 3 },
+                { id: "T016", name: "アプリケーション", reading: "あぷりけーしょん", category: "開発・運用手法", description: "特定の目的のために設計されたソフトウェア。", trendScore: 1 },
+                { id: "T017", name: "アルゴリズム", reading: "あるごりずむ", category: "開発・運用手法", description: "特定の問題を解決するための手順や計算方法。", trendScore: 2 },
+                { id: "T018", name: "エッジAI", reading: "えっじえーあい", category: "先端技術・トレンド", description: "クラウドではなく、IoTデバイス自体でデータ処理や分析を行う人工知能技術。", trendScore: 3 },
+                { id: "T019", name: "エッジコンピューティング", reading: "えっじこんぴゅーてぃんぐ", category: "基盤技術・インフラ", description: "クラウドから遠い場所やデバイスに近い場所でデータを処理・解析する技術。", trendScore: 3 },
+                { id: "T020", name: "オンプレミス", reading: "おんぷれみす", category: "基盤技術・インフラ", description: "サーバーやシステムなどを自社内に設置して運用すること。", trendScore: 2 },
+                { id: "T021", name: "仮想化", reading: "かそうか", category: "基盤技術・インフラ", description: "1つの物理的なリソースを複数の仮想リソースに分割する技術。", trendScore: 2 },
+                { id: "T022", name: "開発環境", reading: "かいはつかんきょう", category: "開発・運用手法", description: "プログラムを開発するために必要なツールや設定をまとめた環境。", trendScore: 1 },
+                { id: "T023", name: "ギットハブ", reading: "ぎっとはぶ", category: "開発・運用手法", description: "プロジェクト管理やバージョン管理に広く利用されるウェブサービス。", trendScore: 1 },
+                { id: "T024", name: "クライアント", reading: "くらいあんと", category: "開発・運用手法", description: "サービスを利用する側のコンピュータやソフトウェア。", trendScore: 1 },
+                { id: "T025", name: "クラウドコンピューティング", reading: "くらうどこんぴゅーてぃんぐ", category: "基盤技術・インフラ", description: "インターネットを通じてデータやサービスを提供する技術。", trendScore: 3 },
+                { id: "T026", name: "グリーンIT", reading: "ぐりーんあいてぃー", category: "基盤技術・インフラ", description: "エネルギー効率の向上などを通じて環境負荷を軽減するIT技術。", trendScore: 1 },
+                { id: "T027", name: "コンテナ化", reading: "こんてなか", category: "開発・運用手法", description: "アプリケーションを環境から切り離し、独立した実行環境で動作させる技術。", trendScore: 2 },
+                { id: "T028", name: "サイバーセキュリティ", reading: "さいばーせきゅりてぃ", category: "基盤技術・インフラ", description: "情報やデータを悪意ある攻撃から保護することを目的とする分野。", trendScore: 3 },
+                { id: "T029", name: "サーバー", reading: "さーばー", category: "開発・運用手法", description: "サービスやデータを提供する側のコンピュータ。", trendScore: 1 },
+                { id: "T030", name: "サーバーレスコンピューティング", reading: "さーばーれすこんぴゅーてぃんぐ", category: "開発・運用手法", description: "開発者がサーバーの管理を意識せずにアプリケーションを構築・実行できるモデル。", trendScore: 2 },
+                { id: "T031", name: "生成AI", reading: "せいせいえーあい", category: "先端技術・トレンド", description: "学習済みのデータを用いて、テキストや画像などのオリジナルコンテンツを生成する人工知能。", trendScore: 3 },
+                { id: "T032", name: "ゼロトラスト", reading: "ぜろとらすと", category: "基盤技術・インフラ", description: "ネットワーク内外に関わらず、すべてのアクセスを信頼せずに検証するセキュリティの考え方。", trendScore: 2 },
+                { id: "T033", name: "デジタルツイン", reading: "でじたるついん", category: "先端技術・トレンド", description: "物理的な物体やプロセスの仮想的なレプリカを作成し、シミュレーションや分析を行う技術。", trendScore: 3 },
+                { id: "T034", name: "デプロイ", reading: "でぷろい", category: "開発・運用手法", description: "サーバーにファイルを配置し、利用可能な状態にすること。", trendScore: 1 },
+                { id: "T035", name: "ディープラーニング", reading: "でぃーぷらーにんぐ", category: "先端技術・トレンド", description: "複数の層を持つニューラルネットワークを用いて、データから特徴を自動的に学習するAIの一分野。", trendScore: 2 },
+                { id: "T036", name: "フィンテック", reading: "ふぃんてっく", category: "ビジネス・マネジメント", description: "金融とIT技術を融合させた新しいサービスやビジネス。", trendScore: 2 },
+                { id: "T037", name: "ブロックチェーン", reading: "ぶろっくちぇーん", category: "基盤技術・インフラ", description: "分散型台帳技術であり、暗号化された取引記録をチェーン状に連結して管理する技術。", trendScore: 3 },
+                { id: "T038", name: "フレームワーク", reading: "ふれーむわーく", category: "開発・運用手法", description: "アプリケーションを開発する上での土台となる枠組み。", trendScore: 1 },
+                { id: "T039", name: "ビッグデータ", reading: "びっぐでーた", category: "基盤技術・インフラ", description: "従来の技術では処理しきれないほど膨大で多様なデータ。", trendScore: 3 },
+                { id: "T040", name: "フロントエンド", reading: "ふろんとえんど", category: "開発・運用手法", description: "ウェブサイトやアプリケーションのユーザーが直接操作する部分。", trendScore: 1 },
+                { id: "T041", name: "マシンラーニング", reading: "ましんらーにんぐ", category: "先端技術・トレンド", description: "データからパターンやルールを学習し、予測や判断を可能にするAIの一分野。", trendScore: 3 },
+                { id: "T042", name: "マルチモーダルAI", reading: "まるちもーだるえーあい", category: "先端技術・トレンド", description: "テキスト、画像、音声といった複数の種類のデータを同時に学習・処理できるAI。", trendScore: 3 },
+                { id: "T043", name: "メタバース", reading: "めたばーす", category: "先端技術・トレンド", description: "VRやARを用いて構築される仮想空間。交流や取引が可能。", trendScore: 3 },
+                { id: "T044", name: "量子コンピューティング", reading: "りょうしこんぴゅーてぃんぐ", category: "先端技術・トレンド", description: "量子力学の原理を利用して、従来のコンピュータでは困難な高度な計算を高速で行う技術。", trendScore: 3 },
+                { id: "T045", name: "UI", reading: "ゆーざーいんたーふぇーす", category: "開発・運用手法", description: "ユーザーがシステムやアプリケーションを操作する際に用いる画面や入力方法。", trendScore: 1 },
+                { id: "T046", name: "UX", reading: "ゆーざーえくすぺりえんす", category: "開発・運用手法", description: "製品やサービスを通じてユーザーが得る体験や満足度。", trendScore: 1 },
+                { id: "T047", name: "API", reading: "えーぴーあい", category: "開発・運用手法", description: "ソフトウェアやアプリケーションを共有する仕組み。", trendScore: 2 },
+                { id: "T048", name: "アウトソーシング", reading: "あうとそーしんぐ", category: "ビジネス・マネジメント", description: "業務の一部を外部の企業に委託すること。", trendScore: 1 },
+                { id: "T049", name: "アカウント", reading: "あかうんと", category: "基盤技術・インフラ", description: "ネットワークサービスを利用するための権利や情報。", trendScore: 1 },
+                { id: "T050", name: "アドオン", reading: "あどおん", category: "開発・運用手法", description: "ソフトウェアに追加される機能やプログラム。", trendScore: 1 },
+                { id: "T051", name: "イーサリアム", reading: "いーさりあむ", category: "先端技術・トレンド", description: "分散型アプリケーションを構築するためのブロックチェーンプラットフォーム。", trendScore: 1 },
+                { id: "T052", name: "インフラ", reading: "いんふら", category: "基盤技術・インフラ", description: "サービスやシステムを支える基盤となるハードウェアやソフトウェア。", trendScore: 1 },
+                { id: "T053", name: "エンコード", reading: "えんこーど", category: "開発・運用手法", description: "データを特定の形式に変換すること。", trendScore: 1 },
+                { id: "T054", name: "エンティティ", reading: "えんてぃてぃ", category: "基盤技術・インフラ", description: "データベースなどで情報を表現する対象となる実体。", trendScore: 1 },
+                { id: "T055", name: "オフショア", reading: "おふしょあ", category: "ビジネス・マネジメント", description: "業務や開発を海外の企業に委託すること。", trendScore: 1 },
+                { id: "T056", name: "カスタマイズ", reading: "かすたまいず", category: "開発・運用手法", description: "ソフトウェアやハードウェアを個々のユーザーの好みに合わせて変更すること。", trendScore: 1 },
+                { id: "T057", name: "クラウドストレージ", reading: "くらうどすとれーじ", category: "基盤技術・インフラ", description: "クラウド上でデータファイルを保存・管理するサービス。", trendScore: 1 },
+                { id: "T058", name: "コンプライアンス", reading: "こんぷらいあんす", category: "ビジネス・マネジメント", description: "企業が法令や社会規範を守って活動すること。", trendScore: 1 },
+                { id: "T059", name: "サーバーレス", reading: "さーばーれす", category: "開発・運用手法", description: "サーバーを管理せずにアプリケーションを実行するモデル。", trendScore: 2 },
+                { id: "T060", name: "サブスクリプション", reading: "さぶすくりぷしょん", category: "ビジネス・マネジメント", description: "定期的に利用料を支払い、サービスを継続的に利用するビジネスモデル。", trendScore: 1 },
+                { id: "T061", name: "ゼロデイ攻撃", reading: "ぜろでいこうげき", category: "基盤技術・インフラ", description: "ソフトウェアの脆弱性が修正される前にその脆弱性を悪用する攻撃。", trendScore: 2 },
+                { id: "T062", name: "タスク管理", reading: "たすくかんり", category: "開発・運用手法", description: "仕事の進捗状況を把握し、効率的に業務を進めること。", trendScore: 1 },
+                { id: "T063", name: "デバッガ", reading: "でばっが", category: "開発・運用手法", description: "プログラムのバグを発見・修正するためのソフトウェア。", trendScore: 1 },
+                { id: "T064", name: "デバッグ", reading: "でばっぐ", category: "開発・運用手法", description: "プログラムのバグを取り除く作業。", trendScore: 1 },
+                { id: "T065", name: "ドメイン", reading: "どめいん", category: "基盤技術・インフラ", description: "ウェブサイトやメールアドレスで使われるインターネット上の識別子。", trendScore: 1 },
+                { id: "T066", name: "トレーサビリティ", reading: "とれーさびりてぃ", category: "ビジネス・マネジメント", description: "製品の生産から消費までの過程を追跡できること。", trendScore: 1 },
+                { id: "T067", name: "トランザクション", reading: "とらんざくしょん", category: "開発・運用手法", description: "複数の処理を一つにまとめ、全体として成功か失敗かを保証する仕組み。", trendScore: 1 },
+                { id: "T068", name: "ビッグデータ分析", reading: "びっぐでーたぶんせき", category: "先端技術・トレンド", description: "膨大なデータから傾向やパターンを抽出し、ビジネスに活用すること。", trendScore: 2 },
+                { id: "T069", name: "フィッシング", reading: "ふぃっしんぐ", category: "基盤技術・インフラ", description: "偽のウェブサイトやメールで個人情報をだまし取る詐欺。", trendScore: 1 },
+                { id: "T070", name: "プライベートクラウド", reading: "ぷらいべーとくらうど", category: "基盤技術・インフラ", description: "特定の企業や組織内だけで利用されるクラウド環境。", trendScore: 1 },
+                { id: "T071", name: "プログラミング", reading: "ぷろぐらみんぐ", category: "開発・運用手法", description: "コンピュータを動かすための命令を記述すること。", trendScore: 1 },
+                { id: "T072", name: "プロジェクト管理", reading: "ぷろじぇくとかんり", category: "開発・運用手法", description: "プロジェクトを計画し、実行し、完了させるための一連の管理活動。", trendScore: 1 },
+                { id: "T073", name: "プロトコル", reading: "ぷろとこる", category: "基盤技術・インフラ", description: "ネットワーク通信における取り決めや手順。", trendScore: 1 },
+                { id: "T074", name: "プロビジョニング", reading: "ぷろびじょにんぐ", category: "基盤技術・インフラ", description: "サーバーやストレージなどのITリソースを割り当てること。", trendScore: 1 },
+                { id: "T075", name: "マルウェア", reading: "まるうぇあ", category: "基盤技術・インフラ", description: "コンピュータに有害な動作をする悪意のあるソフトウェアの総称。", trendScore: 2 },
+                { id: "T076", name: "マイグレーション", reading: "まいぐれーしょん", category: "開発・運用手法", description: "システムやデータを新しい環境に移行すること。", trendScore: 1 },
+                { id: "T077", name: "マイクロサービス", reading: "まいくろさーびす", category: "開発・運用手法", description: "ソフトウェアを小さく独立した複数のサービスとして構築するアーキテクチャ。", trendScore: 2 },
+                { id: "T078", name: "リモートアクセス", reading: "りもーとあくせす", category: "開発・運用手法", description: "遠隔地からネットワークを経由してコンピュータに接続すること。", trendScore: 1 },
+                { id: "T079", name: "ルータ", reading: "るーた", category: "基盤技術・インフラ", description: "ネットワーク間でデータを中継する通信機器。", trendScore: 1 },
+                { id: "T080", name: "ワークフロー", reading: "わーくふろー", category: "ビジネス・マネジメント", description: "一連の業務手続きや作業の流れ。", trendScore: 1 },
+                { id: "T081", name: "APIゲートウェイ", reading: "えーぴーあいげーとうぇい", category: "開発・運用手法", description: "複数のAPIへのアクセスを一つの窓口に集約する仕組み。", trendScore: 1 },
+                { id: "T082", name: "クラウドサービス", reading: "くらうどさーびす", category: "基盤技術・インフラ", description: "クラウドコンピューティングを基盤とした各種サービス。", trendScore: 2 },
+                { id: "T083", name: "グループウェア", reading: "ぐるーぷうぇあ", category: "ビジネス・マネジメント", description: "組織内での情報共有やコミュニケーションを支援するソフトウェア。", trendScore: 1 },
+                { id: "T084", name: "コアコンピタンス", reading: "こあこんぴたんす", category: "ビジネス・マネジメント", description: "他社には真似できない、その企業の中核となる強みや技術。", trendScore: 1 },
+                { id: "T085", name: "サーバー仮想化", reading: "さーばーかそうか", category: "基盤技術・インフラ", description: "1台の物理サーバー上に複数の仮想サーバーを稼働させる技術。", trendScore: 1 },
+                { id: "T086", name: "シングルサインオン", reading: "しんぐるさいんおん", category: "基盤技術・インフラ", description: "一度の認証で複数のシステムやサービスにログインできる仕組み。", trendScore: 1 },
+                { id: "T087", name: "テレワーク", reading: "てれわーく", category: "ビジネス・マネジメント", description: "ITを活用し、場所や時間にとらわれずに働くこと。", trendScore: 1 },
+                { id: "T088", name: "ディスインフォメーション", reading: "でぃすいんふぉめーしょん", category: "先端技術・トレンド", description: "意図的に流される、人を欺くための情報。", trendScore: 1 },
+                { id: "T089", name: "パスワードレス認証", reading: "ぱすわーどれすにんしょう", category: "基盤技術・インフラ", description: "パスワードを使用せずにユーザーを認証する技術。", trendScore: 2 },
+                { id: "T090", name: "プレゼンス", reading: "ぷれぜんす", category: "ビジネス・マネジメント", description: "チームメンバーが今何をしているか、利用可能かなどを示す状態。", trendScore: 1 },
+                { id: "T091", name: "脆弱性", reading: "ぜいじゃくせい", category: "基盤技術・インフラ", description: "ソフトウェアやシステムに存在する、セキュリティ上の欠陥。", trendScore: 1 },
+                { id: "T092", name: "Web3", reading: "うぇぶすりー", category: "先端技術・トレンド", description: "ブロックチェーン技術を用いた分散型の次世代インターネット。", trendScore: 2 },
+                { id: "T093", name: "IoTデバイス", reading: "あいおーてぃーでばいす", category: "基盤技術・インフラ", description: "IoT技術が組み込まれた家電や機器など。", trendScore: 1 },
+                { id: "T094", name: "データサイエンティスト", reading: "でーたさいえんてぃすと", category: "先端技術・トレンド", description: "ビッグデータを分析し、ビジネスに役立つ知見を導き出す専門家。", trendScore: 1 },
+                { id: "T095", name: "リスキリング", reading: "りすきりんぐ", category: "ビジネス・マネジメント", description: "新しいスキルや知識を習得し、新しい職務に対応できるようになること。", trendScore: 1 },
+                { id: "T096", name: "ノーコード", reading: "のーこーど", category: "開発・運用手法", description: "プログラミングのコードを一切書かずにアプリケーションを開発する手法。", trendScore: 2 },
+                { id: "T097", name: "ローコード開発", reading: "ろーこーどかいはつ", category: "開発・運用手法", description: "必要最低限のコードでアプリケーションを開発する手法。", trendScore: 2 },
+                { id: "T098", name: "データドリブン", reading: "でーたどりぶん", category: "ビジネス・マネジメント", description: "勘や経験ではなく、データに基づいて意思決定を行うこと。", trendScore: 1 },
+                { id: "T099", name: "マシン・カスタマー", reading: "ましんかすたまー", category: "先端技術・トレンド", description: "AIやソフトウェアが、人間を代行して製品の購入などを行う技術。", trendScore: 2 },
+                { id: "T100", name: "コンカレントエンジニアリング", reading: "こんかれんとえんじにありんぐ", category: "開発・運用手法", description: "製品開発において、各工程を同時並行で進める手法。", trendScore: 1 }
+            ];
+
+            const termGrid = document.getElementById('term-grid');
+            const searchBox = document.getElementById('search-box');
+            const categoryFilters = document.querySelectorAll('.category-filter');
+            const sortButtons = document.querySelectorAll('.sort-button');
+            const noResults = document.getElementById('no-results');
+
+            let currentCategory = 'all';
+            let currentSort = 'trend';
+            let currentSearch = '';
+
+            const trendColors = {
+                3: 'bg-red-100 text-red-800',
+                2: 'bg-yellow-100 text-yellow-800',
+                1: 'bg-blue-100 text-blue-800'
+            };
+            const trendText = { 3: '高', 2: '中', 1: '低' };
+            
+            const categoryColors = {
+                "先端技術・トレンド": "border-purple-500",
+                "基盤技術・インフラ": "border-sky-500",
+                "開発・運用手法": "border-green-500",
+                "ビジネス・マネジメント": "border-orange-500"
+            };
+
+            function renderTerms() {
+                termGrid.innerHTML = '';
+
+                let filteredTerms = termsData;
+
+                if (currentSearch) {
+                    filteredTerms = filteredTerms.filter(term =>
+                        term.name.toLowerCase().includes(currentSearch) ||
+                        term.reading.includes(currentSearch) ||
+                        term.description.toLowerCase().includes(currentSearch)
+                    );
+                }
+
+                if (currentCategory !== 'all') {
+                    filteredTerms = filteredTerms.filter(term => term.category === currentCategory);
+                }
+
+                if (currentSort === 'trend') {
+                    filteredTerms.sort((a, b) => b.trendScore - a.trendScore || a.reading.localeCompare(b.reading, 'ja'));
+                } else {
+                    filteredTerms.sort((a, b) => a.reading.localeCompare(b.reading, 'ja'));
+                }
+
+                if (filteredTerms.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+
+                filteredTerms.forEach(term => {
+                    const card = document.createElement('div');
+                    card.className = `term-card bg-white p-6 rounded-lg shadow-sm border-l-4 ${categoryColors[term.category] || 'border-gray-300'}`;
+                    
+                    const referenceUrl = `https://www.google.com/search?q=${encodeURIComponent(term.name + " とは")}`;
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-gray-800">${term.name}</h3>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${trendColors[term.trendScore]}">
+                                トレンド: ${trendText[term.trendScore]}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-4">${term.category}</p>
+                        <p class="text-gray-600 mb-4 h-20 overflow-hidden">${term.description}</p>
+                        <a href="${referenceUrl}" target="_blank" rel="noopener noreferrer" class="inline-block text-teal-600 hover:text-teal-800 font-medium transition-colors">
+                            詳しく見る &rarr;
+                        </a>
+                    `;
+                    termGrid.appendChild(card);
+                });
+            }
+
+            searchBox.addEventListener('input', (e) => {
+                currentSearch = e.target.value.toLowerCase();
+                renderTerms();
+            });
+
+            categoryFilters.forEach(button => {
+                button.addEventListener('click', () => {
+                    categoryFilters.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    currentCategory = button.dataset.category;
+                    renderTerms();
+                });
+            });
+
+            sortButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    sortButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    currentSort = button.id === 'sort-by-trend' ? 'trend' : 'name';
+                    renderTerms();
+                });
+            });
+
+            renderTerms();
+        });
+    </script>
+</body>
+</html>
